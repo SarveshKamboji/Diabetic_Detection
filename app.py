@@ -4,6 +4,7 @@ import torchvision.models as models
 import torch.nn as nn
 from PIL import Image
 from torchvision import transforms
+import torch.nn.functional as F
 
 # ===============================
 # Load Model
@@ -30,9 +31,9 @@ transform = transforms.Compose([
 # ===============================
 # UI
 # ===============================
-st.title("Diabetic Retinopathy Detection")
+st.title("🩺 Diabetic Retinopathy Detection System")
 
-st.write("Upload a retina image to detect diabetic retinopathy")
+st.write("Upload a retina image to detect diabetic retinopathy.")
 
 uploaded_file = st.file_uploader("Upload Retina Image", type=["jpg","png","jpeg"])
 
@@ -40,15 +41,21 @@ if uploaded_file is not None:
 
     image = Image.open(uploaded_file).convert("RGB")
 
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.image(image, caption="Uploaded Retina Image", use_column_width=True)
 
     img = transform(image).unsqueeze(0).to(device)
 
     with torch.no_grad():
         outputs = model(img)
-        prediction = torch.argmax(outputs,1).item()
+        probs = F.softmax(outputs, dim=1)
+        confidence, prediction = torch.max(probs, 1)
+
+    confidence = confidence.item() * 100
+    prediction = prediction.item()
+
+    st.subheader("Prediction Result")
 
     if prediction == 0:
-        st.success("Healthy Eye Detected")
+        st.success(f"Healthy Eye Detected ✅ (Confidence: {confidence:.2f}%)")
     else:
-        st.error("Diabetic Retinopathy Detected")
+        st.error(f"Diabetic Retinopathy Detected ⚠️ (Confidence: {confidence:.2f}%)")
